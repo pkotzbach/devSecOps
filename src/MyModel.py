@@ -1,5 +1,6 @@
 from tinygrad import Tensor, TinyJit, nn
 from typing import List, Callable
+from sklearn import metrics
 import config
 import vllm
 
@@ -30,10 +31,9 @@ class MyModel:
         out = self.classifier.forward(tensor).softmax()
         return out
     
-    @TinyJit
+    # @TinyJit
     @Tensor.train()
     def train(self, x, y) -> Tensor:
-        y = Tensor(y, requires_grad=False)
         self.optimizer.zero_grad()
         out = self.forward(x)
         loss = out.sparse_categorical_crossentropy(y)
@@ -41,3 +41,10 @@ class MyModel:
         self.optimizer.step()
         return loss
 
+    # @TinyJit
+    @Tensor.test()
+    def test(self, x, y):
+        out = self.forward(x)
+        loss = out.sparse_categorical_crossentropy(y)
+        f1 = metrics.f1_score(y.numpy(), out.numpy().argmax(axis=1), average="macro") 
+        return loss, f1

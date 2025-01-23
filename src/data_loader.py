@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import config
+import tinygrad
 
 def load_data(path:str):
         df = pd.read_csv(path)
@@ -13,5 +14,5 @@ def load_data(path:str):
 
         X = df["processed_func"].tolist()
         y = df["CWE target"].tolist()
-        y = [config.CWEs.index(i) if not pd.isna(i) else 0 for i in y]
+        y = tinygrad.Tensor([config.CWEs.index(i) if not pd.isna(i) else 0 for i in y], requires_grad=False)
         return X, y

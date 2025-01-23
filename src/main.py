@@ -5,7 +5,21 @@ from data_loader import load_data
 import numpy as np
 import config as cfg
 
-def train(args, model, train_data):
+def test(args, model, test_data):
+    X_test, y_test = test_data
+    batch_size = args.batch_size
+    losses = []
+    f1s = []
+    for i in range(0, len(X_test), batch_size):
+        batch_X = X_test[i:i + batch_size]
+        batch_y = y_test[i:i + batch_size]
+        loss, f1 = model.test(batch_X, batch_y)
+        losses.append(loss.mean().numpy())
+        f1s.append(f1.mean())
+
+    return np.sum(losses)/len(losses), np.sum(f1s)/len(f1s)
+
+def train(args, model, train_data, eval_data):
     X_train, y_train = train_data
     epochs = args.epochs
     batch_size = args.batch_size
@@ -16,13 +30,12 @@ def train(args, model, train_data):
             batch_y = y_train[i:i + batch_size]
             loss = model.train(batch_X, batch_y)
             losses.append(loss.mean().numpy())
-        
-        # for batch in eval_data:
-        #     myModel.eval(batch)
 
-        # myModel.save(f"myModel-{epoch}.pt")
-
-        print(f"Epoch {epoch}: loss={np.sum(losses)/len(losses)}")#, acc={myModel.acc}")
+        if epoch % 5 == 0:
+            eval_loss, eval_f1 = test(args, model, eval_data)
+            print(f"Epoch {epoch}: loss={np.sum(losses)/len(losses)}, eval_loss={eval_loss}, eval_f1={eval_f1}")
+        else:
+            print(f"Epoch {epoch}: loss={np.sum(losses)/len(losses)}")
 
 def main():
     parser = argparse.ArgumentParser()
@@ -41,7 +54,7 @@ def main():
                         help="Do train.")
     parser.add_argument("--layers", default=[768, 128, 64, 19], type=list, required=False,
                         help="Sizes of hidden neurons (has to start with 768 and end with 19).")
-    parser.add_argument("--data_path", default="../data", type=bool, required=False,
+    parser.add_argument("--data_folder", default="~/devSecOps/data/", type=str, required=False,
                         help="Path to folder with data.")
     
     args = parser.parse_args()
@@ -49,8 +62,9 @@ def main():
     llm = LLM(model=args.model, task="embed")
     myModel = MyModel(llm, args)
     if args.do_train:
-        train_data = load_data(args.data_path + "train.csv")
-        train(args, myModel, train_data)
+        train_data = load_data(args.data_folder + "train.csv")
+        eval_data = load_data(args.data_folder + "eval.csv")
+        train(args, myModel, train_data, eval_data)
 
 if __name__ == "__main__":
     main()
